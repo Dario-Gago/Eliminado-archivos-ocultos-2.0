@@ -1,12 +1,67 @@
-# React + Vite
+# 🗂️ Borrado de Archivos Ocultos
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Herramienta web para detectar y eliminar archivos ocultos directamente desde tu navegador**
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 📋 Descripción
 
-## Expanding the ESLint configuration
+Aplicación web moderna que permite escanear carpetas y eliminar archivos ocultos de forma segura. Desarrollada con React y Tailwind CSS.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## ✨ Características
+
+- 🔍 **Detección inteligente** - Escanea archivos ocultos automáticamente
+- 🛡️ **Eliminación segura** - Borra archivos de forma permanente
+- ⚡ **Proceso rápido** - Limpieza en minutos
+- 🌐 **Interfaz web** - Sin descargas, funciona en el navegador
+
+## 🛠️ Tecnologías
+
+- React 18
+- Tailwind CSS
+- Lucide Icons
+- React Router
+
+## 🚀 Instalación
+
+```bash
+# Clonar repositorio
+git clone https://github.com/dariogago/borrado-archivos-ocultos.git
+
+# Instalar dependencias
+cd borrado-archivos-ocultos
+npm install
+
+# Iniciar aplicación
+npm start
+```
+
+## 📖 Uso
+
+1. **Iniciar sesión** - Crea una cuenta o inicia sesión
+2. **Seleccionar carpeta** - Elige el directorio a escanear
+3. **Escanear** - La herramienta busca archivos ocultos
+4. **Limpiar** - Elimina los archivos seleccionados
+
+## 📁 Estructura
+
+```
+src/
+├── components/
+│   ├── Navbar.jsx
+│   └── Footer.jsx
+├── pages/
+│   ├── Home.jsx
+│   ├── Login.jsx
+│   └── Contact.jsx
+└── App.js
+```
+
+## 👨‍💻 Desarrollador
+
+**Dario Gago**
+📧 gagodario1@gmail.com
+
+## 📄 Licencia
+
+MIT License
