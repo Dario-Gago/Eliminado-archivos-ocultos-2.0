@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Mail,
   Lock,
@@ -13,36 +14,87 @@ import {
   Github,
   Chrome
 } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+
+  const { login, register } = useAuth()
+  const navigate = useNavigate()
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     })
+    // Limpiar errores cuando el usuario escriba
+    if (error) setError('')
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setError('')
+    setSuccess('')
 
-    // Simular llamada a API
-    setTimeout(() => {
-      console.log(
-        isRegister ? 'Registrando usuario:' : 'Iniciando sesión:',
-        formData
-      )
+    console.log('Formulario enviado:', { isRegister, email: formData.email })
+
+    try {
+      let result
+
+      if (isRegister) {
+        console.log('Iniciando proceso de registro...')
+        if (!formData.name || !formData.email || !formData.password) {
+          setError('Todos los campos son requeridos')
+          setIsLoading(false)
+          return
+        }
+
+        result = await register(
+          formData.name,
+          formData.email,
+          formData.password
+        )
+      } else {
+        console.log('Iniciando proceso de login...')
+        if (!formData.email || !formData.password) {
+          setError('Email y contraseña son requeridos')
+          setIsLoading(false)
+          return
+        }
+
+        result = await login(formData.email, formData.password)
+      }
+
+      console.log('Resultado:', result)
+
+      if (result.success) {
+        setSuccess(
+          isRegister
+            ? 'Registro exitoso! Redirigiendo...'
+            : 'Login exitoso! Redirigiendo...'
+        )
+        setTimeout(() => {
+          navigate('/dashboard')
+        }, 1500)
+      } else {
+        setError(result.error || 'Error desconocido')
+      }
+    } catch (error) {
+      console.error('Error en handleSubmit:', error)
+      setError('Error de conexión. Verifica que el servidor esté corriendo.')
+    } finally {
       setIsLoading(false)
-      // Aquí redirigiría al dashboard o página principal
-    }, 2000)
+    }
   }
 
   const togglePasswordVisibility = () => {
@@ -84,11 +136,29 @@ const Login = () => {
 
         {/* Formulario */}
         <div className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
+          {/* Mostrar mensajes de error o éxito */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-400/30 rounded-xl text-red-300 text-sm">
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-400/30 rounded-xl text-green-300 text-sm">
+              {success}
+            </div>
+          )}
+
           <div className="space-y-6">
             {/* Tabs */}
             <div className="flex bg-white/10 rounded-xl p-1 mb-6">
               <button
-                onClick={() => setIsRegister(false)}
+                type="button"
+                onClick={() => {
+                  setIsRegister(false)
+                  setError('')
+                  setSuccess('')
+                }}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   !isRegister
                     ? 'bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] shadow-lg'
@@ -98,7 +168,12 @@ const Login = () => {
                 Iniciar Sesión
               </button>
               <button
-                onClick={() => setIsRegister(true)}
+                type="button"
+                onClick={() => {
+                  setIsRegister(true)
+                  setError('')
+                  setSuccess('')
+                }}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   isRegister
                     ? 'bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] shadow-lg'
@@ -109,7 +184,32 @@ const Login = () => {
               </button>
             </div>
 
-            <div className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Campo nombre (solo registro) */}
+              {isRegister && (
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-bold text-[#5ac7aa] mb-3 uppercase tracking-wide"
+                  >
+                    Nombre completo
+                  </label>
+                  <div className="relative">
+                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required={isRegister}
+                      className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm"
+                      placeholder="Tu nombre completo"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Campo email */}
               <div>
                 <label
@@ -167,51 +267,9 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* Campo nombre (solo registro) */}
-              {isRegister && (
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-bold text-[#5ac7aa] mb-3 uppercase tracking-wide"
-                  >
-                    Nombre completo
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="text"
-                      id="name"
-                      name="name"
-                      required
-                      className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm"
-                      placeholder="Tu nombre completo"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Recordar / Olvidé contraseña */}
-              {!isRegister && (
-                <div className="flex items-center justify-between text-sm">
-                  <label className="flex items-center space-x-2 text-gray-300 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-600 bg-white/10 focus:ring-[#5ac7aa]"
-                    />
-                    <span>Recordarme</span>
-                  </label>
-                  <a
-                    href="#"
-                    className="text-[#5ac7aa] hover:text-[#4ba88d] transition-colors font-medium"
-                  >
-                    ¿Olvidaste tu contraseña?
-                  </a>
-                </div>
-              )}
-
               {/* Botón submit */}
               <button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-bold py-4 px-6 rounded-xl hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-300 shadow-2xl hover:shadow-[#5ac7aa]/40 transform hover:-translate-y-1 hover:scale-[1.02] flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
@@ -236,7 +294,7 @@ const Login = () => {
                   </>
                 )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
 

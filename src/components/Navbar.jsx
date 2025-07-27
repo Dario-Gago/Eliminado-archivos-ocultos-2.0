@@ -1,11 +1,30 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Menu, X, FileX, Shield } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Menu, X, FileX, Shield, LogOut, User } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext'
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false)
+  const { isAuthenticated, user, logout } = useAuth()
+  const navigate = useNavigate()
 
   const toggleMenu = () => setIsOpen(!isOpen)
+
+  const handleLogout = () => {
+    logout()
+    navigate('/')
+    setIsOpen(false)
+  }
+
+  const handleLoginClick = () => {
+    navigate('/login')
+    setIsOpen(false)
+  }
+
+  const handleDashboardClick = () => {
+    navigate('/dashboard')
+    setIsOpen(false)
+  }
 
   return (
     <nav className="bg-gradient-to-r from-[#332e1d] via-[#3d3624] to-[#332e1d] text-white shadow-2xl border-b border-[#5ac7aa]/20">
@@ -57,15 +76,43 @@ const Navbar = () => {
             </Link>
           </li>
 
-          <li>
-            <Link
-              to="/login"
-              className="bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-semibold px-6 py-2.5 rounded-lg hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-[#5ac7aa]/30 transform hover:-translate-y-0.5 flex items-center space-x-2"
-            >
-              <Shield className="w-4 h-4" />
-              <span>Ingresar</span>
-            </Link>
-          </li>
+          {isAuthenticated ? (
+            <>
+              <li>
+                <button
+                  onClick={handleDashboardClick}
+                  className="px-4 py-2 rounded-lg hover:bg-[#5ac7aa]/10 hover:text-[#5ac7aa] transition-all duration-200 border border-transparent hover:border-[#5ac7aa]/30 font-medium flex items-center space-x-2"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Dashboard</span>
+                </button>
+              </li>
+              <li>
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-gray-300">
+                    Hola, {user?.name}
+                  </span>
+                  <button
+                    onClick={handleLogout}
+                    className="bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Salir</span>
+                  </button>
+                </div>
+              </li>
+            </>
+          ) : (
+            <li>
+              <button
+                onClick={handleLoginClick}
+                className="bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-semibold px-6 py-2.5 rounded-lg hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-200 shadow-lg hover:shadow-xl hover:shadow-[#5ac7aa]/30 transform hover:-translate-y-0.5 flex items-center space-x-2"
+              >
+                <Shield className="w-4 h-4" />
+                <span>Ingresar</span>
+              </button>
+            </li>
+          )}
         </ul>
       </div>
 
@@ -97,16 +144,41 @@ const Navbar = () => {
               </Link>
             </li>
 
-            <li>
-              <Link
-                to="/login"
-                className="flex items-center justify-center space-x-2 bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-semibold px-6 py-3 rounded-lg hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-200 shadow-lg"
-                onClick={toggleMenu}
-              >
-                <Shield className="w-4 h-4" />
-                <span>Ingresar</span>
-              </Link>
-            </li>
+            {isAuthenticated ? (
+              <>
+                <li>
+                  <button
+                    onClick={handleDashboardClick}
+                    className="w-full text-left px-4 py-3 rounded-lg hover:bg-[#5ac7aa]/10 hover:text-[#5ac7aa] transition-all duration-200 border border-transparent hover:border-[#5ac7aa]/30 font-medium flex items-center space-x-2"
+                  >
+                    <User className="w-4 h-4" />
+                    <span>Dashboard</span>
+                  </button>
+                </li>
+                <li>
+                  <div className="px-4 py-2 text-sm text-gray-300">
+                    Conectado como: {user?.name}
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full bg-red-500/20 hover:bg-red-500/30 text-red-300 font-semibold px-4 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2 mt-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Cerrar Sesión</span>
+                  </button>
+                </li>
+              </>
+            ) : (
+              <li>
+                <button
+                  onClick={handleLoginClick}
+                  className="w-full bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-semibold px-6 py-3 rounded-lg hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-200 shadow-lg flex items-center justify-center space-x-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  <span>Ingresar</span>
+                </button>
+              </li>
+            )}
           </ul>
         </div>
       </div>

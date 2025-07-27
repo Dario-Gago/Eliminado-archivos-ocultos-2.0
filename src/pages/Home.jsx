@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   FileX,
   Shield,
@@ -24,7 +25,8 @@ const Home = () => {
   const [showLoginModal, setShowLoginModal] = useState(false)
 
   const handleSelectFolder = () => {
-    setShowLoginModal(true)
+    // Navegar directamente al dashboard (asumiendo que ya está autenticado)
+    window.location.href = '/dashboard'
   }
 
   const features = [
@@ -276,7 +278,6 @@ const Home = () => {
             <p className="text-sm text-gray-400 mt-4">
               Requiere iniciar sesión para acceder a la herramienta
             </p>
-            ¿Listo para limpiar tu sistema?
           </div>
         </div>
       </section>
@@ -299,7 +300,7 @@ const Home = () => {
 
             <div className="space-y-4">
               <button
-                onClick={() => (window.location.href = '/login')}
+                onClick={() => navigate('/login')}
                 className="w-full bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-bold py-4 px-6 rounded-xl hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-300 flex items-center justify-center space-x-2"
               >
                 <LogIn className="w-5 h-5" />
