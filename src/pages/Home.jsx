@@ -238,10 +238,9 @@ const Home = () => {
                 </div>
                 <div className="absolute -inset-4 bg-gradient-to-r from-[#5ac7aa]/20 to-[#4ba88d]/20 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
               </div>
-              <h3 className="text-2xl font-bold text-white mb-4">Limpiar</h3>
+              <h3 className="text-2xl font-bold text-white mb-4">Descarga</h3>
               <p className="text-gray-300">
-                Elimina los archivos ocultos seleccionados directamente desde tu
-                navegador
+                Descarga las carpetas sin los archivos ocultos
               </p>
             </div>
           </div>
@@ -278,21 +277,6 @@ const Home = () => {
               Requiere iniciar sesión para acceder a la herramienta
             </p>
             ¿Listo para limpiar tu sistema?
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">
-              Inicia sesión y selecciona una carpeta para comenzar la limpieza
-              de archivos ocultos directamente desde tu navegador.
-            </p>
-            <button
-              onClick={handleSelectFolder}
-              className="group bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-bold py-6 px-12 rounded-2xl hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-300 shadow-2xl hover:shadow-[#5ac7aa]/40 transform hover:-translate-y-1 hover:scale-105 flex items-center space-x-3 text-xl mx-auto"
-            >
-              <FolderOpen className="w-7 h-7 group-hover:animate-pulse" />
-              <span>Seleccionar Carpeta</span>
-              <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <p className="text-sm text-gray-400 mt-4">
-              Requiere iniciar sesión para acceder a la herramienta
-            </p>
           </div>
         </div>
       </section>
