@@ -2,10 +2,11 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNotification } from '../contexts/NotificationContext'
+import { API_CONFIG } from '../config/api'
 
 export const useApi = () => {
-  const { token } = useAuth()
-  const { showError } = useNotification()
+  const { token, logout } = useAuth()
+  const { showError, showSuccess } = useNotification()
   const [loading, setLoading] = useState(false)
 
   const apiCall = async (url, options = {}) => {
@@ -18,20 +19,50 @@ export const useApi = () => {
           ...(token && { Authorization: `Bearer ${token}` }),
           ...options.headers
         },
+        timeout: API_CONFIG.TIMEOUT,
         ...options
       }
 
-      const response = await fetch(url, config)
+      // Implementar timeout manual
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT)
+
+      const response = await fetch(url, {
+        ...config,
+        signal: controller.signal
+      })
+
+      clearTimeout(timeoutId)
+
+      // Si el token expiró, cerrar sesión
+      if (response.status === 401) {
+        showError('Sesión expirada. Por favor inicia sesión nuevamente.')
+        logout()
+        return { success: false, error: 'Token expired' }
+      }
+
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.message || 'Error en la petición')
+        throw new Error(
+          data.message || `Error ${response.status}: ${response.statusText}`
+        )
       }
 
       return { success: true, data }
     } catch (error) {
-      showError(error.message)
-      return { success: false, error: error.message }
+      let errorMessage = 'Error en la petición'
+
+      if (error.name === 'AbortError') {
+        errorMessage = 'La petición tardó demasiado tiempo'
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'Error de conexión. Verifica tu conexión a internet.'
+      } else {
+        errorMessage = error.message
+      }
+
+      showError(errorMessage)
+      return { success: false, error: errorMessage }
     } finally {
       setLoading(false)
     }
@@ -59,7 +90,12 @@ export const useLocalStorage = (key, initialValue) => {
       const valueToStore =
         value instanceof Function ? value(storedValue) : value
       setStoredValue(valueToStore)
-      window.localStorage.setItem(key, JSON.stringify(valueToStore))
+
+      if (valueToStore === null || valueToStore === undefined) {
+        window.localStorage.removeItem(key)
+      } else {
+        window.localStorage.setItem(key, JSON.stringify(valueToStore))
+      }
     } catch (error) {
       console.error(`Error setting localStorage key "${key}":`, error)
     }
@@ -195,11 +231,13 @@ export const useForm = (initialValues, validationRules = {}) => {
 // src/hooks/useFileUpload.js
 import { useState } from 'react'
 import { useNotification } from '../contexts/NotificationContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export const useFileUpload = () => {
   const [uploading, setUploading] = useState(false)
   const [progress, setProgress] = useState(0)
   const { showSuccess, showError } = useNotification()
+  const { token } = useAuth()
 
   const uploadFile = async (file, endpoint) => {
     try {
@@ -212,6 +250,7 @@ export const useFileUpload = () => {
       const xhr = new XMLHttpRequest()
 
       return new Promise((resolve, reject) => {
+        // Progreso de subida
         xhr.upload.addEventListener('progress', (e) => {
           if (e.lengthComputable) {
             const percentProgress = (e.loaded / e.total) * 100
@@ -219,24 +258,49 @@ export const useFileUpload = () => {
           }
         })
 
+        // Éxito
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
-            const response = JSON.parse(xhr.responseText)
-            showSuccess('Archivo subido correctamente')
-            resolve(response)
+            try {
+              const response = JSON.parse(xhr.responseText)
+              showSuccess('Archivo subido correctamente')
+              resolve(response)
+            } catch (parseError) {
+              showError('Error procesando respuesta del servidor')
+              reject(new Error('Error procesando respuesta'))
+            }
           } else {
-            const error = JSON.parse(xhr.responseText)
-            showError(error.message || 'Error subiendo archivo')
-            reject(new Error(error.message))
+            try {
+              const error = JSON.parse(xhr.responseText)
+              showError(error.message || `Error ${xhr.status}`)
+              reject(new Error(error.message))
+            } catch (parseError) {
+              showError(`Error ${xhr.status}: ${xhr.statusText}`)
+              reject(new Error(`Error ${xhr.status}`))
+            }
           }
         })
 
+        // Error de red
         xhr.addEventListener('error', () => {
           showError('Error de conexión')
           reject(new Error('Error de conexión'))
         })
 
+        // Timeout
+        xhr.addEventListener('timeout', () => {
+          showError('La subida tardó demasiado tiempo')
+          reject(new Error('Timeout'))
+        })
+
         xhr.open('POST', endpoint)
+        xhr.timeout = 30000 // 30 segundos para archivos
+
+        // Agregar token de autorización si existe
+        if (token) {
+          xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+        }
+
         xhr.send(formData)
       })
     } catch (error) {

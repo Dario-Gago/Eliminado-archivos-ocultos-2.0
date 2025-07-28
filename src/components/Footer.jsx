@@ -60,22 +60,6 @@ const Footer = () => {
                   <span>Contacto</span>
                 </a>
               </li>
-              <li>
-                <a
-                  href="/privacy"
-                  className="text-gray-300 hover:text-[#5ac7aa] transition-colors duration-200 text-sm flex items-center space-x-2"
-                >
-                  <span>Política de privacidad</span>
-                </a>
-              </li>
-              <li>
-                <a
-                  href="/terms"
-                  className="text-gray-300 hover:text-[#5ac7aa] transition-colors duration-200 text-sm flex items-center space-x-2"
-                >
-                  <span>Términos de uso</span>
-                </a>
-              </li>
             </ul>
           </div>
 

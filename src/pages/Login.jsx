@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Mail,
   Lock,
@@ -11,8 +11,9 @@ import {
   Sparkles,
   User,
   ArrowRight,
-  Github,
-  Chrome
+  AlertCircle,
+  CheckCircle,
+  Loader2
 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -23,78 +24,194 @@ const Login = () => {
     password: ''
   })
   const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
+  const [errors, setErrors] = useState({})
+  const [submitError, setSubmitError] = useState('')
+  const [submitSuccess, setSubmitSuccess] = useState('')
 
-  const { login, register } = useAuth()
+  const { login, register, isLoading, isAuthenticated } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Obtener la ruta de redirección
+  const from = location.state?.from?.pathname || '/dashboard'
+
+  // Redireccionar si ya está autenticado
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true })
+    }
+  }, [isAuthenticated, navigate, from])
+
+  // Limpiar errores y formulario cuando cambie el modo
+  useEffect(() => {
+    setSubmitError('')
+    setSubmitSuccess('')
+    setErrors({})
+    setFormData({
+      name: '',
+      email: '',
+      password: ''
+    })
+  }, [isRegister])
+
+  // Validaciones del lado del cliente
+  const validateField = (name, value) => {
+    const newErrors = { ...errors }
+
+    switch (name) {
+      case 'name':
+        if (isRegister) {
+          if (!value.trim()) {
+            newErrors.name = 'El nombre es requerido'
+          } else if (value.trim().length < 2) {
+            newErrors.name = 'El nombre debe tener al menos 2 caracteres'
+          } else if (value.trim().length > 50) {
+            newErrors.name = 'El nombre no puede exceder 50 caracteres'
+          } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(value)) {
+            newErrors.name = 'El nombre solo puede contener letras y espacios'
+          } else {
+            delete newErrors.name
+          }
+        }
+        break
+
+      case 'email':
+        if (!value) {
+          newErrors.email = 'El email es requerido'
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+          newErrors.email = 'Ingresa un email válido'
+        } else if (value.length > 255) {
+          newErrors.email = 'El email no puede exceder 255 caracteres'
+        } else {
+          delete newErrors.email
+        }
+        break
+
+      case 'password':
+        if (!value) {
+          newErrors.password = 'La contraseña es requerida'
+        } else if (value.length < 6) {
+          newErrors.password = 'La contraseña debe tener al menos 6 caracteres'
+        } else if (value.length > 128) {
+          newErrors.password = 'La contraseña no puede exceder 128 caracteres'
+        } else if (
+          isRegister &&
+          !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)
+        ) {
+          newErrors.password =
+            'La contraseña debe contener al menos: una minúscula, una mayúscula y un número'
+        } else {
+          delete newErrors.password
+        }
+        break
+
+      default:
+        break
+    }
+
+    setErrors(newErrors)
+    return !newErrors[name]
+  }
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
+    const { name, value } = e.target
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value
+    }))
+
     // Limpiar errores cuando el usuario escriba
-    if (error) setError('')
+    if (errors[name]) {
+      const newErrors = { ...errors }
+      delete newErrors[name]
+      setErrors(newErrors)
+    }
+
+    // Limpiar errores de submit
+    if (submitError) setSubmitError('')
+  }
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target
+    validateField(name, value)
+  }
+
+  const validateForm = () => {
+    const fieldsToValidate = isRegister
+      ? ['name', 'email', 'password']
+      : ['email', 'password']
+
+    let isValid = true
+
+    fieldsToValidate.forEach((field) => {
+      const fieldValid = validateField(field, formData[field])
+      if (!fieldValid) isValid = false
+    })
+
+    return isValid
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    setIsLoading(true)
-    setError('')
-    setSuccess('')
+    setSubmitError('')
+    setSubmitSuccess('')
 
-    console.log('Formulario enviado:', { isRegister, email: formData.email })
+    // Validar formulario
+    if (!validateForm()) {
+      setSubmitError('Por favor corrige los errores en el formulario')
+      return
+    }
+
+    console.log('📝 Formulario enviado:', {
+      isRegister,
+      email: formData.email,
+      hasName: !!formData.name,
+      hasPassword: !!formData.password
+    })
 
     try {
       let result
 
       if (isRegister) {
-        console.log('Iniciando proceso de registro...')
-        if (!formData.name || !formData.email || !formData.password) {
-          setError('Todos los campos son requeridos')
-          setIsLoading(false)
-          return
-        }
-
+        console.log('🔄 Iniciando proceso de registro...')
         result = await register(
           formData.name,
           formData.email,
           formData.password
         )
       } else {
-        console.log('Iniciando proceso de login...')
-        if (!formData.email || !formData.password) {
-          setError('Email y contraseña son requeridos')
-          setIsLoading(false)
-          return
-        }
-
+        console.log('🔄 Iniciando proceso de login...')
         result = await login(formData.email, formData.password)
       }
 
-      console.log('Resultado:', result)
+      console.log('📊 Resultado:', result)
 
       if (result.success) {
-        setSuccess(
-          isRegister
+        const message =
+          result.message ||
+          (isRegister
             ? 'Registro exitoso! Redirigiendo...'
-            : 'Login exitoso! Redirigiendo...'
-        )
+            : 'Login exitoso! Redirigiendo...')
+
+        setSubmitSuccess(message)
+
+        // Redireccionar después de un breve delay
         setTimeout(() => {
-          navigate('/dashboard')
+          navigate(from, { replace: true })
         }, 1500)
       } else {
-        setError(result.error || 'Error desconocido')
+        setSubmitError(result.error || 'Error desconocido')
       }
     } catch (error) {
-      console.error('Error en handleSubmit:', error)
-      setError('Error de conexión. Verifica que el servidor esté corriendo.')
-    } finally {
-      setIsLoading(false)
+      console.error('💥 Error en handleSubmit:', error)
+      setSubmitError('Error inesperado. Por favor intenta nuevamente.')
     }
+  }
+
+  const toggleMode = (newMode) => {
+    setIsRegister(newMode)
   }
 
   const togglePasswordVisibility = () => {
@@ -105,9 +222,9 @@ const Login = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#332e1d] via-gray-900 to-[#2a261a] flex items-center justify-center p-4 relative overflow-hidden">
       {/* Elementos decorativos de fondo */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 w-64 h-64 bg-[#5ac7aa]/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-20 right-10 w-80 h-80 bg-[#5ac7aa]/5 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#5ac7aa]/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-20 left-10 w-64 h-64 bg-[#5ac7aa]/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute bottom-20 right-10 w-80 h-80 bg-[#5ac7aa]/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#5ac7aa]/10 rounded-full blur-3xl animate-pulse delay-500"></div>
       </div>
 
       <div className="relative z-10 w-full max-w-md">
@@ -137,15 +254,17 @@ const Login = () => {
         {/* Formulario */}
         <div className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/20 shadow-2xl">
           {/* Mostrar mensajes de error o éxito */}
-          {error && (
-            <div className="mb-6 p-4 bg-red-500/20 border border-red-400/30 rounded-xl text-red-300 text-sm">
-              {error}
+          {submitError && (
+            <div className="mb-6 p-4 bg-red-500/20 border border-red-400/30 rounded-xl flex items-center space-x-3">
+              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <span className="text-red-300 text-sm">{submitError}</span>
             </div>
           )}
 
-          {success && (
-            <div className="mb-6 p-4 bg-green-500/20 border border-green-400/30 rounded-xl text-green-300 text-sm">
-              {success}
+          {submitSuccess && (
+            <div className="mb-6 p-4 bg-green-500/20 border border-green-400/30 rounded-xl flex items-center space-x-3">
+              <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+              <span className="text-green-300 text-sm">{submitSuccess}</span>
             </div>
           )}
 
@@ -154,31 +273,25 @@ const Login = () => {
             <div className="flex bg-white/10 rounded-xl p-1 mb-6">
               <button
                 type="button"
-                onClick={() => {
-                  setIsRegister(false)
-                  setError('')
-                  setSuccess('')
-                }}
+                onClick={() => toggleMode(false)}
+                disabled={isLoading}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   !isRegister
                     ? 'bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] shadow-lg'
                     : 'text-gray-300 hover:text-white'
-                }`}
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Iniciar Sesión
               </button>
               <button
                 type="button"
-                onClick={() => {
-                  setIsRegister(true)
-                  setError('')
-                  setSuccess('')
-                }}
+                onClick={() => toggleMode(true)}
+                disabled={isLoading}
                 className={`flex-1 py-3 px-4 rounded-lg font-semibold transition-all duration-300 ${
                   isRegister
                     ? 'bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] shadow-lg'
                     : 'text-gray-300 hover:text-white'
-                }`}
+                } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 Registrarse
               </button>
@@ -202,10 +315,21 @@ const Login = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      required={isRegister}
-                      className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm"
+                      onBlur={handleBlur}
+                      disabled={isLoading}
+                      className={`w-full pl-12 pr-4 py-4 bg-white/10 border rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm ${
+                        errors.name
+                          ? 'border-red-400/50 focus:ring-red-400'
+                          : 'border-white/20'
+                      } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       placeholder="Tu nombre completo"
                     />
+                    {errors.name && (
+                      <div className="mt-2 flex items-center space-x-2 text-red-400 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>{errors.name}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -226,10 +350,21 @@ const Login = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    required
-                    className="w-full pl-12 pr-4 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm"
+                    onBlur={handleBlur}
+                    disabled={isLoading}
+                    className={`w-full pl-12 pr-4 py-4 bg-white/10 border rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm ${
+                      errors.email
+                        ? 'border-red-400/50 focus:ring-red-400'
+                        : 'border-white/20'
+                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     placeholder="tu@email.com"
                   />
+                  {errors.email && (
+                    <div className="mt-2 flex items-center space-x-2 text-red-400 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{errors.email}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -249,14 +384,20 @@ const Login = () => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
-                    required
-                    className="w-full pl-12 pr-12 py-4 bg-white/10 border border-white/20 rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm"
+                    onBlur={handleBlur}
+                    disabled={isLoading}
+                    className={`w-full pl-12 pr-12 py-4 bg-white/10 border rounded-xl text-white placeholder-gray-400 focus:ring-2 focus:ring-[#5ac7aa] focus:border-[#5ac7aa] transition-all duration-300 backdrop-blur-sm ${
+                      errors.password
+                        ? 'border-red-400/50 focus:ring-red-400'
+                        : 'border-white/20'
+                    } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={togglePasswordVisibility}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#5ac7aa] transition-colors"
+                    disabled={isLoading}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-[#5ac7aa] transition-colors disabled:opacity-50"
                   >
                     {showPassword ? (
                       <EyeOff className="w-5 h-5" />
@@ -264,18 +405,30 @@ const Login = () => {
                       <Eye className="w-5 h-5" />
                     )}
                   </button>
+                  {errors.password && (
+                    <div className="mt-2 flex items-center space-x-2 text-red-400 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{errors.password}</span>
+                    </div>
+                  )}
                 </div>
+                {isRegister && (
+                  <div className="mt-2 text-xs text-gray-400">
+                    Debe contener al menos: 6 caracteres, una minúscula, una
+                    mayúscula y un número
+                  </div>
+                )}
               </div>
 
               {/* Botón submit */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-bold py-4 px-6 rounded-xl hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-300 shadow-2xl hover:shadow-[#5ac7aa]/40 transform hover:-translate-y-1 hover:scale-[1.02] flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                className="w-full bg-gradient-to-r from-[#5ac7aa] to-[#4ba88d] text-[#332e1d] font-bold py-4 px-6 rounded-xl hover:from-[#4ba88d] hover:to-[#5ac7aa] transition-all duration-300 shadow-2xl hover:shadow-[#5ac7aa]/40 transform hover:-translate-y-1 hover:scale-[1.02] flex items-center justify-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:scale-100"
               >
                 {isLoading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-[#332e1d]/30 border-t-[#332e1d] rounded-full animate-spin"></div>
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     <span>
                       {isRegister ? 'Creando cuenta...' : 'Iniciando sesión...'}
                     </span>
@@ -313,6 +466,21 @@ const Login = () => {
             </p>
           </div>
         </div>
+
+        {/* Información de debugging en desarrollo */}
+        {import.meta.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-4 bg-gray-800/50 rounded-lg text-xs text-gray-400">
+            <div>🔧 Debug Info:</div>
+            <div>
+              • Backend:{' '}
+              {import.meta.env.VITE_API_URL || 'http://localhost:3001'}
+            </div>
+            <div>• Modo: {isRegister ? 'Registro' : 'Login'}</div>
+            <div>• Loading: {isLoading ? 'Sí' : 'No'}</div>
+            <div>• Errores: {Object.keys(errors).length}</div>
+            <div>• Autenticado: {isAuthenticated ? 'Sí' : 'No'}</div>
+          </div>
+        )}
       </div>
     </div>
   )
